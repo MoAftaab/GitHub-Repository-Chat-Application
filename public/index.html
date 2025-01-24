@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GitHub Repo Chat Assistant</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', sans-serif;
+        }
+
+        body {
+            line-height: 1.6;
+            background: #0d1117;
+            color: #c9d1d9;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 1rem;
+        }
+
+        .container {
+            max-width: 1200px;
+            width: 100%;
+            margin: auto;
+            padding: 1rem;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 600;
+            color: #f0f6fc;
+            margin-bottom: 0.5rem;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            color: #8b949e;
+        }
+
+        .github-login {
+            text-align: center;
+            padding: 2rem;
+            background: rgba(22, 27, 34, 0.8);
+            border-radius: 12px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+            margin-bottom: 2rem;
+        }
+
+        .login-btn {
+            background: linear-gradient(135deg, #238636, #2ea043);
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 500;
+            transition: transform 0.2s, box-shadow 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .login-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(35, 134, 54, 0.4);
+        }
+
+        .login-btn:active {
+            transform: translateY(0);
+        }
+
+        .login-btn i {
+            font-size: 1.2rem;
+        }
+
+        .chat-container {
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            gap: 1rem;
+            background: rgba(22, 27, 34, 0.8);
+            border-radius: 12px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+            min-height: 600px;
+            overflow: hidden;
+            animation: fadeIn 0.5s ease-in-out;
+        }
+
+        .repo-list {
+            padding: 1.5rem;
+            border-right: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(13, 17, 23, 0.8);
+            overflow-y: auto;
+        }
+
+        .repo-list h2 {
+            margin-bottom: 1.5rem;
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #f0f6fc;
+        }
+
+        .repo-container {
+            margin-bottom: 0.5rem;
+        }
+
+        .repo-header {
+            padding: 0.75rem;
+            cursor: pointer;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            color: #c9d1d9;
+            transition: background 0.3s, transform 0.2s;
+        }
+
+        .repo-header:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: translateX(5px);
+        }
+
+        .repo-header.selected {
+            background: rgba(31, 111, 235, 0.2);
+            color: #1f6feb;
+            font-weight: 500;
+        }
+
+        .repo-icon {
+            margin-right: 0.5rem;
+            font-size: 0.9rem;
+        }
+
+        .repo-name {
+            flex-grow: 1;
+            font-weight: 500;
+        }
+
+        .tree-toggle {
+            background: none;
+            border: none;
+            color: #8b949e;
+            cursor: pointer;
+            padding: 0.25rem;
+            font-size: 0.8rem;
+            transition: color 0.2s;
+        }
+
+        .tree-toggle:hover {
+            color: #c9d1d9;
+        }
+
+        .tree-content {
+            margin-left: 1.5rem;
+        }
+
+        .tree-item {
+            padding: 0.25rem 0;
+        }
+
+        .tree-item-content {
+            display: flex;
+            align-items: center;
+            color: #c9d1d9;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .tree-item-content:hover {
+            color: #f0f6fc;
+        }
+
+        .item-name {
+            margin-left: 0.25rem;
+        }
+
+        .chat-window {
+            display: flex;
+            flex-direction: column;
+            padding: 1.5rem;
+        }
+
+        .messages {
+            flex-grow: 1;
+            overflow-y: auto;
+            padding: 1rem;
+            background: rgba(22, 27, 34, 0.8);
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+            min-height: 400px;
+        }
+
+        .message {
+            margin-bottom: 1rem;
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            max-width: 80%;
+            animation: fadeIn 0.3s ease-in-out;
+        }
+
+        .user-message {
+            background: linear-gradient(135deg, #1f6feb, #1652a5);
+            color: white;
+            margin-left: auto;
+        }
+
+        .assistant-message {
+            background: rgba(255, 255, 255, 0.1);
+            color: #c9d1d9;
+        }
+
+        .input-container {
+            display: flex;
+            gap: 1rem;
+            background: rgba(22, 27, 34, 0.8);
+            padding: 1rem;
+            border-radius: 8px;
+        }
+
+        .chat-input {
+            flex-grow: 1;
+            padding: 0.75rem;
+            background: rgba(13, 17, 23, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            color: #c9d1d9;
+            font-size: 1rem;
+            transition: border-color 0.3s;
+        }
+
+        .chat-input:focus {
+            outline: none;
+            border-color: #1f6feb;
+            box-shadow: 0 0 0 2px rgba(31, 111, 235, 0.3);
+        }
+
+        .send-btn {
+            background: linear-gradient(135deg, #238636, #2ea043);
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .send-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(35, 134, 54, 0.4);
+        }
+
+        .send-btn:active {
+            transform: translateY(0);
+        }
+
+        .loading {
+            text-align: center;
+            padding: 1rem;
+            color: #8b949e;
+        }
+
+        .error {
+            color: #f85149;
+            padding: 0.5rem;
+            font-size: 0.9rem;
+        }
+
+        .empty {
+            color: #8b949e;
+            text-align: center;
+            padding: 1rem;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .chat-container {
+                grid-template-columns: 1fr;
+            }
+
+            .repo-list {
+                border-right: none;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            }
+
+            .header h1 {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>GitHub Repo Chat Assistant</h1>
+            <p>Chat with your GitHub repositories and get help with your code</p>
+        </div>
+
+        <div class="github-login" id="loginContainer">
+            <button class="login-btn" id="loginBtn">
+                <i class="fab fa-github"></i>
+                Login with GitHub
+            </button>
+        </div>
+
+        <div class="chat-container" id="chatContainer" style="display: none;">
+            <div class="repo-list">
+                <h2>Your Repositories</h2>
+                <div id="repoList"></div>
+            </div>
+
+            <div class="chat-window">
+                <div class="messages" id="messages"></div>
+                <div class="input-container">
+                    <input type="text" class="chat-input" id="chatInput" placeholder="Ask about the repository or selected files...">
+                    <button class="send-btn" id="sendBtn">
+                        <i class="fas fa-paper-plane"></i>
+                        Send
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/js/app.js"></script>
+</body>
+</html>
