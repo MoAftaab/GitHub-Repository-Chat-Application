@@ -1,0 +1,54 @@
+.login-section {
+  max-width: 400px;
+  padding: 2rem;
+  text-align: center;
+}
+
+.login-section h1 {
+  font-size: 2rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  color: #24292e;
+}
+
+.login-section p {
+  color: #586069;
+  margin-bottom: 2rem;
+}
+
+.github-login-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.75rem 1.5rem;
+  font-size: 1rem;
+  font-weight: 500;
+  color: white;
+  background-color: #24292e;
+  border: 1px solid rgba(27, 31, 35, 0.15);
+  border-radius: 6px;
+  box-shadow: 0 1px 0 rgba(27, 31, 35, 0.1);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.github-login-button:hover {
+  background-color: #2c3238;
+  border-color: rgba(27, 31, 35, 0.3);
+}
+
+.github-login-button:active {
+  background-color: #1b1f23;
+  border-color: rgba(27, 31, 35, 0.5);
+}
+
+.github-icon {
+  display: flex;
+  align-items: center;
+}
+
+.github-icon svg {
+  color: white;
+}

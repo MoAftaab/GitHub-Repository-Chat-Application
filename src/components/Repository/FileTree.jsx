@@ -1,86 +1,67 @@
-import React, { useEffect, useState } from 'react';
-import PropTypes from 'prop-types';
+import React from 'react';
 import TreeNode from './TreeNode';
+import './FileTree.css';
 
-/**
- * @component
- * @description Displays a hierarchical file tree structure for a repository
- */
-const FileTree = ({ repoFullName, containerRef, onFileSelect }) => {
-    const [files, setFiles] = useState(null);
-    const [error, setError] = useState(null);
+function buildFileTree(files) {
+  const root = {};
+  
+  files.forEach(file => {
+    const parts = file.path.split('/');
+    let current = root;
+    
+    parts.forEach((part, i) => {
+      if (!current[part]) {
+        current[part] = {
+          name: part,
+          path: parts.slice(0, i + 1).join('/'),
+          children: {},
+          type: i === parts.length - 1 ? 'blob' : 'tree'
+        };
+      }
+      current = current[part].children;
+    });
+  });
+  
+  return root;
+}
 
-    useEffect(() => {
-        fetchFiles();
-    }, [repoFullName]);
+function sortNodes(nodes) {
+  return Object.values(nodes).sort((a, b) => {
+    // Folders come before files
+    if (a.type === 'tree' && b.type === 'blob') return -1;
+    if (a.type === 'blob' && b.type === 'tree') return 1;
+    // Alphabetical sort within the same type
+    return a.name.localeCompare(b.name);
+  });
+}
 
-    const fetchFiles = async () => {
-        try {
-            const response = await fetch(`/api/repos/${repoFullName}/files`);
-            const data = await response.json();
+function FileTree({ files, selectedFiles, onFileSelect }) {
+  const fileTree = React.useMemo(() => buildFileTree(files), [files]);
+  const sortedNodes = React.useMemo(() => sortNodes(fileTree), [fileTree]);
 
-            if (!response.ok) {
-                throw new Error(data.error || 'Failed to fetch repository files');
-            }
-
-            // Build tree structure
-            const tree = {};
-            data
-                .filter(file => file.type === 'blob')
-                .forEach(file => {
-                    const parts = file.path.split('/');
-                    let current = tree;
-                    parts.forEach((part, i) => {
-                        if (i === parts.length - 1) {
-                            current[part] = null; // File
-                        } else {
-                            current[part] = current[part] || {}; // Folder
-                            current = current[part];
-                        }
-                    });
-                });
-
-            setFiles(tree);
-            setError(null);
-        } catch (err) {
-            console.error('Error fetching files:', err);
-            setError('Failed to load files');
-            setFiles(null);
-        }
-    };
-
-    if (error) {
-        return <div className="error">{error}</div>;
-    }
-
-    if (!files) {
-        return <div className="loading">Loading files...</div>;
-    }
-
-    const renderTree = (obj, path = '') => {
-        return Object.entries(obj).map(([name, subtree]) => {
-            const fullPath = path ? `${path}/${name}` : name;
-            return (
-                <TreeNode
-                    key={fullPath}
-                    name={name}
-                    path={fullPath}
-                    isFile={subtree === null}
-                    onSelect={onFileSelect}
-                >
-                    {subtree !== null && renderTree(subtree, fullPath)}
-                </TreeNode>
-            );
-        });
-    };
-
-    return <div className="file-tree">{renderTree(files)}</div>;
-};
-
-FileTree.propTypes = {
-    repoFullName: PropTypes.string.isRequired,
-    containerRef: PropTypes.shape({ current: PropTypes.any }).isRequired,
-    onFileSelect: PropTypes.func.isRequired
-};
+  return (
+    <div className="file-tree">
+      <div className="file-tree-header">
+        <h3>Repository Files</h3>
+        {selectedFiles.length > 0 && (
+          <div className="selected-count">
+            {selectedFiles.length} file{selectedFiles.length !== 1 ? 's' : ''} selected
+          </div>
+        )}
+      </div>
+      <div className="file-tree-content">
+        {sortedNodes.map(node => (
+          <TreeNode
+            key={node.path}
+            node={node}
+            level={0}
+            selectedFiles={selectedFiles}
+            onFileSelect={onFileSelect}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
 
 export default FileTree;

@@ -1,3 +1,4 @@
+import OpenAI from 'openai';
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
@@ -7,10 +8,18 @@ import { dirname, join } from 'path';
 
 dotenv.config();
 
+const openai = new OpenAI({
+  apiKey: process.env.OPEN_API_KEY,
+  baseURL: process.env.BASE_URL,
+  model: process.env.model,
+});
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const isProduction = process.env.NODE_ENV === 'production';
+
+let conversationHistory = [];
 
 app.use(cors());
 app.use(express.json());
@@ -186,7 +195,11 @@ async function fetchFileContent(filePath, token, repoData) {
             return `Error fetching content for ${filePath}`;
         }
         const contentData = await contentResponse.json();
-        return `Content of ${filePath}:\n${contentData.content}\n`; // Include filename in context
+        let content = Buffer.from(contentData.content, 'base64').toString('utf-8');
+        if (content.length > 1000) {
+            content = content.substring(0, 1000) + '... (truncated)';
+        }
+        return `Content of ${filePath}:\n${content}\n`; // Include filename in context
     } catch (error) {
         console.error(`Error fetching content for ${filePath}:`, error);
         return `Error fetching content for ${filePath}`;
@@ -195,10 +208,13 @@ async function fetchFileContent(filePath, token, repoData) {
 
 // Chat endpoint using Zephyr
 app.post('/api/chat', async (req, res) => {
-    const { message, repoData, filePaths, codeDefinitions } = req.body; // Expect filePaths and codeDefinitions in request body
+    const { message, repoData, files, codeDefinitions } = req.body; // Expect files and codeDefinitions in request body
     const token = req.query.token;
 
     try {
+        // Add user message to conversation history
+        conversationHistory.push(`User: ${message}`);
+
         // Prepare context about the repository
         let context = [
             'Repository Information:',
@@ -208,22 +224,52 @@ app.post('/api/chat', async (req, res) => {
             `Open Issues: ${repoData.issues.length}`
         ].join('\n');
 
-        // Fetch and include file contents in context if filePaths are provided
-        if (filePaths && filePaths.length > 0) {
+        // Include file contents in context if provided
+        if (files && files.length > 0) {
             context += '\n\nFile Contents:\n';
-            const fileContents = await Promise.all(
-                filePaths.map(filePath => fetchFileContent(filePath, token, repoData))
-            );
-            context += fileContents.join('\n'); // Join contents with new lines
+            const fileContents = files.map(file => {
+                // Get file extension for language detection
+                const ext = file.path.split('.').pop();
+                const language = ext || 'text';
+                return `Content of ${file.path}:\n\`\`\`${language}\n${file.content}\n\`\`\``;
+            });
+            context += fileContents.join('\n\n');
         }
+
+        // Helper function to format code in AI response
+        const formatCodeInResponse = (text) => {
+            const codeFileRegex = /Content of ([^:]+):/g;
+            let formattedText = text;
+            
+            // Find code file references and add code blocks
+            const matches = text.match(codeFileRegex);
+            if (matches) {
+                matches.forEach(match => {
+                    const filePath = match.replace('Content of ', '').replace(':', '');
+                    const file = files?.find(f => f.path === filePath);
+                    if (file) {
+                        const ext = filePath.split('.').pop();
+                        formattedText = formattedText.replace(
+                            `${match}\n${file.content}`,
+                            `${match}\n\`\`\`${ext}\n${file.content}\n\`\`\``
+                        );
+                    }
+                });
+            }
+            return formattedText;
+        };
         
         if (codeDefinitions && codeDefinitions.length > 0) {
             context += '\n\nCode Definitions:\n';
             context += codeDefinitions.join('\n');
         }
 
+        // Include conversation history in the input
+        const conversationContext = conversationHistory.join('\n');
+        const inputs = `Repository context:\n${context}\n\nConversation History:\n${conversationContext}\n\nUser Question: ${message}`;
+
         const requestBody = JSON.stringify({
-            inputs: `Repository context:\n${context}\n\nUser Question: ${message}`,
+            inputs: inputs,
             parameters: {
                 max_new_tokens: 250,
                 temperature: 0.7,
@@ -232,30 +278,38 @@ app.post('/api/chat', async (req, res) => {
             }
         });
 
-        console.log("Hugging Face API Request Body:", requestBody);
+        console.log("OpenAI API Request Body:", requestBody);
 
-        const response = await fetch(
-            "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-v0.1",
-            {
-                headers: {
-                    "Authorization": `Bearer ${process.env.HUGGING_FACE_TOKEN}`,
-                    "Content-Type": "application/json" 
-                },
-                method: "POST",
-                body: requestBody
-            }
-        );
+        const openaiResponse = await openai.chat.completions.create({
+            model: process.env.model,
+            messages: [{ role: "user", content: inputs }],
+            max_tokens: 250,
+            temperature: 0.7,
+            top_p: 0.95,
+            frequency_penalty: 0,
+            presence_penalty: 0,
+        });
 
-        console.log("Hugging Face API Response Status:", response.status);
-        console.log("Hugging Face API Raw Response:", await response.clone().text());
+        let generatedText = openaiResponse.choices[0].message.content;
 
-        if (!response.ok) {
-            const errorData = await response.json();
-            return res.status(response.status).json({ error: 'Hugging Face API error', details: errorData });
-        }
+        // Format the first sentence (context) without bullet
+        const sentences = generatedText.split(/(?<=[.!?])\s+/);
+        const firstSentence = sentences.shift();
+        
+        // Format remaining sentences as bullet points with plain text
+        const bulletPoints = sentences
+            .filter(sentence => sentence.length > 5)  // Filter out very short sentences
+            .map(sentence => {
+                // Remove any markdown formatting like ** or __ 
+                return `• ${sentence.trim().replace(/[*_]{1,2}([^*_]+)[*_]{1,2}/g, '$1')}`;
+            });
+            
+        // Combine with proper spacing
+        // Format the response with code blocks
+        generatedText = formatCodeInResponse(firstSentence) + '\n\n' + bulletPoints.join('\n ');
 
-        const responseData = await response.json();
-        const generatedText = responseData[0]?.generated_text;
+        // Add AI response to conversation history
+        conversationHistory.push(`AI: ${generatedText}`);
 
         res.json({ response: generatedText });
 

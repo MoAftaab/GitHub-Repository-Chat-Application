@@ -1,45 +1,63 @@
-import React from 'react';
-import PropTypes from 'prop-types';
+import React, { useState } from 'react';
+import './TreeNode.css';
 
-/**
- * @component
- * @description Represents a file or folder node in the repository file tree
- */
-const TreeNode = ({ name, path, isFile, onSelect, children }) => {
-    const indent = path.split('/').length - 1;
+function TreeNode({ node, level, selectedFiles, onFileSelect }) {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const isFile = node.type === 'blob';
+  const isSelected = selectedFiles.includes(node.path);
+  
+  const toggleExpand = (e) => {
+    e.stopPropagation();
+    setIsExpanded(!isExpanded);
+  };
 
-    return (
-        <div className="tree-item" style={{ marginLeft: `${indent * 20}px` }}>
-            <label className="tree-item-content">
-                {isFile ? (
-                    <>
-                        <input 
-                            type="checkbox" 
-                            data-path={path} 
-                            onChange={(e) => onSelect(e.target.dataset.path, e.target.checked)} 
-                        />
-                        <span className="file-icon">📄</span>
-                    </>
-                ) : (
-                    <span className="folder-icon">📁</span>
-                )}
-                <span className="item-name">{name}</span>
-            </label>
-            {!isFile && children && (
-                <div className="tree-children">
-                    {children}
-                </div>
-            )}
+  const handleSelect = () => {
+    if (isFile) {
+      onFileSelect(node.path);
+    } else {
+      setIsExpanded(!isExpanded);
+    }
+  };
+
+  const sortedChildren = Object.values(node.children).sort((a, b) => {
+    if (a.type === 'tree' && b.type === 'blob') return -1;
+    if (a.type === 'blob' && b.type === 'tree') return 1;
+    return a.name.localeCompare(b.name);
+  });
+
+  return (
+    <div className="tree-node">
+      <div 
+        className={`node-content${isSelected ? ' selected' : ''}`}
+        style={{ paddingLeft: `${level * 20}px` }}
+        onClick={handleSelect}
+      >
+        {!isFile && (
+          <span className={`expand-icon${isExpanded ? ' expanded' : ''}`}>
+            ▶
+          </span>
+        )}
+        <span className={`node-icon${isFile ? ' file' : ' folder'}`}>
+          {isFile ? '📄' : isExpanded ? '📂' : '📁'}
+        </span>
+        <span className="node-name">{node.name}</span>
+      </div>
+      
+      {!isFile && isExpanded && (
+        <div className="node-children">
+          {sortedChildren.map(childNode => (
+            <TreeNode
+              key={childNode.path}
+              node={childNode}
+              level={level + 1}
+              selectedFiles={selectedFiles}
+              onFileSelect={onFileSelect}
+            />
+          ))}
         </div>
-    );
-};
-
-TreeNode.propTypes = {
-    name: PropTypes.string.isRequired,
-    path: PropTypes.string.isRequired,
-    isFile: PropTypes.bool.isRequired,
-    onSelect: PropTypes.func.isRequired,
-    children: PropTypes.node
-};
+      )}
+    </div>
+  );
+}
 
 export default TreeNode;

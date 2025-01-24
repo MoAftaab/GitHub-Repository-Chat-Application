@@ -1,44 +1,73 @@
 import React from 'react';
-import PropTypes from 'prop-types';
 import RepositoryItem from './RepositoryItem';
+import './RepositoryList.css';
 
-/**
- * @component
- * @description Displays a list of GitHub repositories with expandable file trees
- */
-const RepositoryList = ({ 
-    repos, 
-    selectedRepo, 
-    onRepoSelect, 
-    onRepoToggle, 
-    onFileSelect 
-}) => {
-    return (
-        <aside id="repoList">
-            {repos.map(repo => (
-                <RepositoryItem
-                    key={repo.id}
-                    repo={repo}
-                    isSelected={selectedRepo === repo.full_name}
-                    onSelect={() => onRepoSelect(repo.full_name)}
-                    onToggle={(e) => onRepoToggle(e, repo.full_name)}
-                    onFileSelect={onFileSelect}
-                />
-            ))}
-        </aside>
-    );
-};
+function RepositoryList({ token, selectedRepo, onSelectRepo, loading, setLoading }) {
+  const [repos, setRepos] = React.useState([]);
+  const [error, setError] = React.useState(null);
 
-RepositoryList.propTypes = {
-    repos: PropTypes.arrayOf(PropTypes.shape({
-        id: PropTypes.number.isRequired,
-        name: PropTypes.string.isRequired,
-        full_name: PropTypes.string.isRequired
-    })).isRequired,
-    selectedRepo: PropTypes.string,
-    onRepoSelect: PropTypes.func.isRequired,
-    onRepoToggle: PropTypes.func.isRequired,
-    onFileSelect: PropTypes.func.isRequired
-};
+  React.useEffect(() => {
+    const fetchRepos = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const response = await fetch('/api/repos?token=' + token);
+        if (!response.ok) throw new Error('Failed to fetch repositories');
+        const data = await response.json();
+        setRepos(data);
+      } catch (err) {
+        console.error('Error fetching repos:', err);
+        setError('Failed to load repositories. Please try again.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (token) {
+      fetchRepos();
+    }
+  }, [token, setLoading]);
+
+  const handleRepoSelect = async (repo) => {
+    try {
+      setLoading(true);
+      const response = await fetch(`/api/repos/${repo.owner.login}/${repo.name}?token=${token}`);
+      if (!response.ok) throw new Error('Failed to fetch repository details');
+      const data = await response.json();
+      onSelectRepo(data);
+    } catch (err) {
+      console.error('Error fetching repo details:', err);
+      setError('Failed to load repository details. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (error) {
+    return <div className="repository-error">{error}</div>;
+  }
+
+  return (
+    <div className="repository-section">
+      <h2>Your Repositories</h2>
+      <div className="repository-list">
+        {loading ? (
+          <div className="loading">Loading repositories...</div>
+        ) : repos.length === 0 ? (
+          <div className="no-repos">No repositories found</div>
+        ) : (
+          repos.map(repo => (
+            <RepositoryItem
+              key={repo.id}
+              repo={repo}
+              selected={selectedRepo?.repository.id === repo.id}
+              onClick={() => handleRepoSelect(repo)}
+            />
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
 
 export default RepositoryList;

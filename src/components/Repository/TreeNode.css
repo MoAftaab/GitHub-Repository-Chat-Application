@@ -1,0 +1,77 @@
+.tree-node {
+  font-size: 0.9rem;
+}
+
+.node-content {
+  display: flex;
+  align-items: center;
+  padding: 4px 8px;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+.node-content:hover {
+  background-color: #f6f8fa;
+}
+
+.node-content.selected {
+  background-color: #f1f8ff;
+  color: #0366d6;
+}
+
+.expand-icon {
+  display: inline-flex;
+  width: 16px;
+  height: 16px;
+  justify-content: center;
+  align-items: center;
+  font-size: 10px;
+  margin-right: 4px;
+  color: #6a737d;
+  transition: transform 0.2s;
+}
+
+.expand-icon.expanded {
+  transform: rotate(90deg);
+}
+
+.node-icon {
+  margin-right: 8px;
+  font-size: 1rem;
+}
+
+.node-name {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.node-children {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* File type colors */
+.node-name[data-ext="js"],
+.node-name[data-ext="jsx"],
+.node-name[data-ext="ts"],
+.node-name[data-ext="tsx"] {
+  color: #f1c40f;
+}
+
+.node-name[data-ext="css"],
+.node-name[data-ext="scss"],
+.node-name[data-ext="sass"] {
+  color: #3498db;
+}
+
+.node-name[data-ext="json"] {
+  color: #9b59b6;
+}
+
+.node-name[data-ext="md"] {
+  color: #2ecc71;
+}

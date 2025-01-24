@@ -1,20 +1,21 @@
-# GitHub Repository Chat Application 🚀
+# Project Overview
 
-A modern React application that allows users to chat with an AI about their GitHub repositories. This application helps developers understand and navigate codebases more efficiently by providing an intelligent chat interface connected to their repositories.
+This project integrates the OpenAI API to provide AI-driven functionality.
 
-## ✨ Features
+## Installation
 
-- **GitHub Authentication**: Securely authenticate with your GitHub account using OAuth.
-- **Repository Browsing**: Easily browse your GitHub repositories within the application.
-- **File Tree Exploration**: Navigate through an expandable file tree to explore repository contents.
-- **Context-Aware Chat**: Chat with an AI model that understands your selected repository and files.
-- **Code Understanding**: Get explanations, summaries, and insights about your code directly in the chat.
-- **Multi-File Selection**: Select specific files to provide context to the AI for more targeted questions.
-- **Responsive Design**: User-friendly interface optimized for both desktop and mobile devices.
+1. Navigate to the project root folder.
+2. Run `npm install` to install dependencies.
 
-## 🛠️ Tech Stack
+## Usage
 
-### Frontend
+1. Create an OpenAI account and obtain an API key.
+2. In the `.env` file, set OPENAI_API_KEY with your key.
+3. Start the server with `node src/server.js`.
+
+## Contact
+
+For any inquiries or issues, open a ticket in this repository.
 
 - **React.js**: A JavaScript library for building user interfaces.
 - **JSX**: A syntax extension to JavaScript for writing HTML-like structures in React.
